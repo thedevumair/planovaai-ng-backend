@@ -1,0 +1,7 @@
+package com.planovaai.backend.repository;
+
+import com.planovaai.backend.entity.Project;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ProjectRepository extends JpaRepository<Project, Long> {
+}
