@@ -1,9 +1,6 @@
 package com.planovaai.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
@@ -17,4 +14,8 @@ public class Task {
     public String title;
     public String status;
     public int duration;
+
+    @ManyToOne
+    @JoinColumn(name = "project_id")
+    private Project project;
 }
