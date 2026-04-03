@@ -6,6 +6,8 @@ import com.planovaai.backend.repository.ProjectRepository;
 import com.planovaai.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ProjectService {
 
@@ -23,5 +25,9 @@ public class ProjectService {
 
         project.setUser(user);
         return projectRepository.save(project);
+    }
+
+    public List<Project> getProjectsByUserId(Long userId) {
+        return projectRepository.findByUserId(userId);
     }
 }

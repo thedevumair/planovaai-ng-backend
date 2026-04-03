@@ -6,6 +6,8 @@ import com.planovaai.backend.repository.ProjectRepository;
 import com.planovaai.backend.repository.TaskRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class TaskService {
 
@@ -23,5 +25,9 @@ public class TaskService {
 
         task.setProject(project);
         return taskRepository.save(task);
+    }
+
+    public List<Task> getTasksByProjectId(Long projectId) {
+        return taskRepository.findByProjectId(projectId);
     }
 }
