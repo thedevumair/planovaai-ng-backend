@@ -23,4 +23,9 @@ public class GanttTaskController {
     public List<GanttTaskDto> generateGantt(@PathVariable Long projectId) {
         return ganttTaskService.generateGantt(projectId);
     }
+
+    @GetMapping("/smart/project/{projectId}")
+    public List<GanttTaskDto> generateSmartGantt(@PathVariable Long projectId) {
+        return ganttTaskService.generateSmartGantt(projectId);
+    }
 }
