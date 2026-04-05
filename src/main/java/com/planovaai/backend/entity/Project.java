@@ -12,10 +12,10 @@ public class Project {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    private Long id;
 
-    public String name;
-    public String description;
+    private String name;
+    private String description;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
