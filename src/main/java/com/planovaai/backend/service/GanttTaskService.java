@@ -38,4 +38,30 @@ public class GanttTaskService {
 
         return ganttTaskDtoList;
     }
+
+    public List<GanttTaskDto> generateSmartGantt(Long projectId) {
+        List<Task> tasks = taskRepository.findByProjectId(projectId);
+
+        List<GanttTaskDto> ganttTaskDtoList = new ArrayList<>();
+
+        int currentDay = 1;
+
+        for (Task task : tasks) {
+            GanttTaskDto dto = new GanttTaskDto();
+
+            int duration = task.getActualDuration() > 0
+                    ? task.getActualDuration()
+                    : task.getDuration();
+
+            dto.setTitle(task.getTitle());
+            dto.setStartDay(currentDay);
+            dto.setEndDay(currentDay + duration);
+
+            currentDay += duration;
+
+            ganttTaskDtoList.add(dto);
+        }
+
+        return ganttTaskDtoList;
+    }
 }
