@@ -10,11 +10,12 @@ public class Task {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    private Long id;
 
-    public String title;
-    public String status;
-    public int duration;
+    private String title;
+    private String status;
+    private int duration;
+    private int actualDuration;
 
     @ManyToOne
     @JoinColumn(name = "project_id")
