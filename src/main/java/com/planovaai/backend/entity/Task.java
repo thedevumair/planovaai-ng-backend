@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDate;
+
 @Data
 @Entity
 public class Task {
@@ -16,6 +18,10 @@ public class Task {
     private String status;
     private int duration;
     private int actualDuration;
+    private String responsible;
+
+    private LocalDate startDate;
+    private LocalDate endDate;
 
     @ManyToOne
     @JoinColumn(name = "project_id")
