@@ -3,8 +3,11 @@ package com.planovaai.backend.controller;
 import com.planovaai.backend.dto.ExtractedTaskDto;
 import com.planovaai.backend.dto.GanttTaskDto;
 import com.planovaai.backend.entity.Project;
+import com.planovaai.backend.entity.User;
 import com.planovaai.backend.repository.ProjectRepository;
+import com.planovaai.backend.repository.UserRepository;
 import com.planovaai.backend.service.*;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/model")
@@ -25,13 +29,17 @@ public class ModelSuggestionController {
     private final PlanningService planningService;
     private final GanttTaskService ganttTaskService;
     private final ProjectRepository projectRepository;
+    private final  JwtService jwtService;
+    private final UserRepository userRepository;
     public ModelSuggestionController(
             ModelSuggestionService modelSuggestionService,
             AiService aiService,
             GanttTaskService ganttTaskService,
             ProjectRepository projectRepository,
             PlanningService planningService,
-            TaskExtractionService taskExtractionService
+            TaskExtractionService taskExtractionService,
+            JwtService jwtService,
+            UserRepository userRepository
     ) {
         this.modelSuggestionService = modelSuggestionService;
         this.aiService = aiService;
@@ -39,45 +47,73 @@ public class ModelSuggestionController {
         this.projectRepository = projectRepository;
         this.planningService = planningService;
         this.taskExtractionService = taskExtractionService;
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
 
     }
 
     @PostMapping("/full-analysis")
-    public ResponseEntity<?> fullAnalysis(@RequestParam MultipartFile file) throws Exception {
+    public ResponseEntity<?> fullAnalysis(
+            @RequestParam MultipartFile file,
+            HttpServletRequest request) {
+        try {
+            // ✅ Get userId from JWT
+            String header = request.getHeader("Authorization");
+            String userId = null;
+            if (header != null && header.startsWith("Bearer ")) {
+                userId = jwtService.extractUserId(header.substring(7));
+            }
 
-        String text = modelSuggestionService.extractTextFromDocument(file);
+            String text = modelSuggestionService.extractTextFromDocument(file);
 
-        Map<String, Object> aiResult = aiService.predictModel(text);
-        String model = (String) aiResult.get("model");
-        String modelLabel = (String) aiResult.get("modelLabel");
+            Map<String, Object> aiResult = aiService.predictModel(text);
+            String model = (String) aiResult.get("model");
+            String modelLabel = (String) aiResult.get("modelLabel");
 
-        String complexity = planningService.detectComplexity(text);
+            String complexity = planningService.detectComplexity(text);
 
-        Project project = new Project();
-        project.setName("Auto Project");
-        projectRepository.save(project);
+            // ✅ Save project under user
+            Project project = new Project();
+            project.setName(file.getOriginalFilename()
+                    .replace(".docx", "").replace(".txt", ""));
+            project.setDescription("Model: " + model + " | Complexity: " + complexity);
 
-        planningService.generatePlan(model, complexity, project);
+            if (userId != null) {
+                User user = userRepository.findById(userId).orElse(null);
+                project.setUser(user);
+            }
+            projectRepository.save(project);
 
-        // Use AI generated tasks for BOTH table and gantt
-        List<GanttTaskDto> ganttTask = ganttTaskService.generateFromSrs(text, model, complexity);
+            planningService.generatePlan(model, complexity, project);
 
-        // Convert ganttTask to match what frontend expects for the table
-        List<Map<String, Object>> tasks = ganttTask.stream().map(t -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("title", t.getTitle());
-            map.put("startDate", t.getStartDate());
-            map.put("endDate", t.getEndDate());
-            map.put("duration", t.getDuration());
-            map.put("status", t.getStatus());
-            map.put("progress", t.getProgress());
-            return map;
-        }).collect(java.util.stream.Collectors.toList());
+            List<GanttTaskDto> ganttTask = ganttTaskService.generateFromSrs(
+                    text, model, complexity, project
+            );
 
-        return ResponseEntity.ok(Map.of(
-                "model", modelLabel,
-                "tasks", tasks,        // now shows proper dev tasks in table
-                "ganttTask", ganttTask // same data in gantt chart
-        ));
+            List<Map<String, Object>> tasks = ganttTask.stream().map(t -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", t.getId());
+                map.put("title", t.getTitle());
+                map.put("description", t.getDescription());
+                map.put("startDate", t.getStartDate());
+                map.put("endDate", t.getEndDate());
+                map.put("duration", t.getDuration());
+                map.put("status", t.getStatus());
+                map.put("progress", t.getProgress());
+                map.put("type", t.getType());
+                map.put("dependsOn", t.getDependsOn());
+                return map;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "model", modelLabel,
+                    "projectId", project.getId(),
+                    "tasks", tasks,
+                    "ganttTask", ganttTask
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 }
