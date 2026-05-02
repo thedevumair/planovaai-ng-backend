@@ -17,6 +17,13 @@ public class User {
     private String email;
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    private Role role = Role.DEVELOPER; // ✅ default role
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Project> projects;
+
+    public enum Role {
+        TEAM_LEAD, DEVELOPER
+    }
 }
