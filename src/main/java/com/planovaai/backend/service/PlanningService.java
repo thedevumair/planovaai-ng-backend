@@ -72,7 +72,7 @@ public class PlanningService {
         task.setDuration(duration);
         task.setStatus("Planned");
         task.setProject(project);
-        task.setResponsible("Team Member");
+//        task.setResponsible("Team Member");
 
         return task;
     }

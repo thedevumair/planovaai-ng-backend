@@ -2,6 +2,8 @@ package com.planovaai.backend.service;
 
 import com.planovaai.backend.dto.ExtractedTaskDto;
 import com.planovaai.backend.dto.GanttTaskDto;
+import com.planovaai.backend.entity.Project;
+import com.planovaai.backend.entity.Task;
 import com.planovaai.backend.repository.TaskRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,12 +22,16 @@ public class GanttTaskService {
         this.taskRepository = taskRepository;
     }
 
+    // Backward compatible — no project
     public List<GanttTaskDto> generateFromSrs(String srsText, String model, String complexity) {
+        return generateFromSrs(srsText, model, complexity, null);
+    }
+
+    public List<GanttTaskDto> generateFromSrs(String srsText, String model, String complexity, Project project) {
 
         List<GanttTaskDto> list = new ArrayList<>();
 
         try {
-            // ✅ Call Flask AI endpoint
             String url = "http://localhost:5000/generate-tasks";
 
             Map<String, String> request = new HashMap<>();
@@ -38,12 +44,13 @@ public class GanttTaskService {
 
             LocalDate currentDate = LocalDate.now();
 
+            // ✅ Delete old tasks for this project before saving new ones
+            if (project != null) {
+                taskRepository.deleteByProjectId(project.getId());
+            }
+
             for (int i = 0; i < tasks.size(); i++) {
                 Map<String, Object> task = tasks.get(i);
-
-                GanttTaskDto dto = new GanttTaskDto();
-                dto.setId(UUID.randomUUID().toString());
-                dto.setTitle((String) task.get("title"));
 
                 int duration = task.get("estimatedDays") != null
                         ? ((Number) task.get("estimatedDays")).intValue()
@@ -52,21 +59,48 @@ public class GanttTaskService {
                 LocalDate start = currentDate;
                 LocalDate end = start.plusDays(duration);
 
+                GanttTaskDto dto = new GanttTaskDto();
+                dto.setTitle((String) task.get("title"));
+                dto.setDescription((String) task.getOrDefault("description", ""));
                 dto.setStartDate(start);
                 dto.setEndDate(end);
                 dto.setDuration(duration);
                 dto.setProgress(0);
                 dto.setStatus("Planned");
                 dto.setType((String) task.getOrDefault("type", "FR"));
-                dto.setDescription((String) task.getOrDefault("description", ""));
 
                 if (i > 0) {
                     dto.setDependsOn(list.get(i - 1).getId());
                 }
 
+                if (project != null) {
+                    // ✅ Save to DB — DB generates UUID automatically
+                    Task entity = new Task();
+                    entity.setTitle(dto.getTitle());
+                    entity.setDescription(dto.getDescription());
+                    entity.setStartDate(dto.getStartDate());
+                    entity.setEndDate(dto.getEndDate());
+                    entity.setDuration(dto.getDuration());
+                    entity.setProgress(0);
+                    entity.setStatus("Planned");
+                    entity.setType(dto.getType());
+                    entity.setDependsOn(dto.getDependsOn());
+                    entity.setProject(project);
+                    taskRepository.save(entity);
+
+                    // ✅ Use DB generated UUID — no toString() needed since id is String
+                    dto.setId(entity.getId());
+
+                } else {
+                    // ✅ No project — generate UUID manually for session only
+                    dto.setId(UUID.randomUUID().toString());
+                }
+
                 currentDate = end;
                 list.add(dto);
             }
+
+            System.out.println("✅ Saved " + list.size() + " tasks to DB");
 
         } catch (Exception e) {
             System.err.println("❌ Flask task generation failed: " + e.getMessage());

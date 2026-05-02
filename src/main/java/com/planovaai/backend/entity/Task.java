@@ -11,20 +11,24 @@ import java.time.LocalDate;
 public class Task {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
+    @Column(length = 500)
     private String title;
-    private String status;
-    private int duration;
-    private int actualDuration;
-    private String responsible;
-
     private LocalDate startDate;
     private LocalDate endDate;
+    private int duration;
+    private int progress;
+    private String status;
+    private String type;
+    @Column(columnDefinition = "TEXT")
+    private String description;
+    @Column(length = 500)
+    private String dependsOn;
 
     @ManyToOne
     @JoinColumn(name = "project_id")
-    @JsonIgnore
     private Project project;
+
 }
