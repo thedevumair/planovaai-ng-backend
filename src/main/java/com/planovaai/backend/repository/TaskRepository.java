@@ -9,6 +9,7 @@ import java.util.List;
 
 @Repository
 public interface TaskRepository  extends JpaRepository<Task, String> {
+    List<Task> findByProjectIdOrderByStartDateAsc(String projectId);
     List<Task> findByProjectId(String projectId);
 
     @Transactional

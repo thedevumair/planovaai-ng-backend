@@ -29,15 +29,18 @@ public class AuthService {
         user.setName(name);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
+        user.setRole(User.Role.DEVELOPER); //always developer by default
+
         userRepository.save(user);
 
-        String token = jwtService.generateToken(email, user.getId()); // ✅ String id
+        String token = jwtService.generateToken(email, user.getId());
 
         return Map.of(
                 "token", token,
-                "userId", user.getId(), // ✅ String
+                "userId", user.getId(),
                 "name", user.getName(),
-                "email", user.getEmail()
+                "email", user.getEmail(),
+                "role", user.getRole().name()
         );
     }
 
@@ -58,7 +61,8 @@ public class AuthService {
                 "token", token,
                 "userId", user.getId(), // ✅ String
                 "name", user.getName(),
-                "email", user.getEmail()
+                "email", user.getEmail(),
+                "role", user.getRole().name()
         );
     }
 }

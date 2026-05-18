@@ -57,7 +57,6 @@ public class ModelSuggestionController {
             @RequestParam MultipartFile file,
             HttpServletRequest request) {
         try {
-            // ✅ Get userId from JWT
             String header = request.getHeader("Authorization");
             String userId = null;
             if (header != null && header.startsWith("Bearer ")) {
@@ -72,18 +71,27 @@ public class ModelSuggestionController {
 
             String complexity = planningService.detectComplexity(text);
 
-            // ✅ Save project under user
             Project project = new Project();
             project.setName(file.getOriginalFilename()
                     .replace(".docx", "").replace(".txt", ""));
             project.setDescription("Model: " + model + " | Complexity: " + complexity);
 
+            User currentUser = null;
             if (userId != null) {
-                User user = userRepository.findById(userId).orElse(null);
-                project.setUser(user);
-            }
-            projectRepository.save(project);
+                currentUser = userRepository.findById(userId).orElse(null);
 
+                if (currentUser != null) {
+                    project.setUser(currentUser);
+
+                    // Promote to TEAM_LEAD when they upload SRS
+                    if (currentUser.getRole() == User.Role.DEVELOPER) {
+                        currentUser.setRole(User.Role.TEAM_LEAD);
+                        userRepository.save(currentUser);
+                    }
+                }
+            }
+
+            projectRepository.save(project);
             planningService.generatePlan(model, complexity, project);
 
             List<GanttTaskDto> ganttTask = ganttTaskService.generateFromSrs(
@@ -109,7 +117,8 @@ public class ModelSuggestionController {
                     "model", modelLabel,
                     "projectId", project.getId(),
                     "tasks", tasks,
-                    "ganttTask", ganttTask
+                    "ganttTask", ganttTask,
+                    "role", currentUser != null ? currentUser.getRole().name() : "DEVELOPER"
             ));
 
         } catch (Exception e) {
