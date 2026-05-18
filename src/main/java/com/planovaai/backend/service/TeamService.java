@@ -1,9 +1,6 @@
 package com.planovaai.backend.service;
 
-import com.planovaai.backend.entity.Task;
-import com.planovaai.backend.entity.TaskAssignment;
-import com.planovaai.backend.entity.TeamMember;
-import com.planovaai.backend.entity.User;
+import com.planovaai.backend.entity.*;
 import com.planovaai.backend.repository.*;
 import org.springframework.stereotype.Service;
 
@@ -127,7 +124,8 @@ public class TeamService {
 
     // Get project tasks with assignment info
     public List<Map<String, Object>> getProjectTasksWithAssignments(String projectId) {
-        List<Task> tasks = taskRepository.findByProjectId(projectId);
+        List<Task> tasks = taskRepository
+                .findByProjectIdOrderByStartDateAsc(projectId);
 
         return tasks.stream().map(task -> {
             Map<String, Object> map = new HashMap<>();
@@ -137,16 +135,28 @@ public class TeamService {
             map.put("progress", task.getProgress());
             map.put("startDate", task.getStartDate());
             map.put("endDate", task.getEndDate());
+            map.put("duration", task.getDuration());
             map.put("type", task.getType());
 
-            // Assignments for this task
-            List<TaskAssignment> assignments = taskAssignmentRepository.findByTaskId(task.getId());
+            List<TaskAssignment> assignments =
+                    taskAssignmentRepository.findByTaskId(task.getId());
+
+            // ✅ Calculate average developer progress
+            int avgProgress = 0;
+            if (!assignments.isEmpty()) {
+                avgProgress = assignments.stream()
+                        .mapToInt(TaskAssignment::getProgress)
+                        .sum() / assignments.size();
+            }
+            map.put("developerProgress", avgProgress);
+
             List<Map<String, Object>> assignees = assignments.stream().map(a -> {
                 Map<String, Object> aMap = new HashMap<>();
                 aMap.put("assignmentId", a.getId());
                 aMap.put("name", a.getAssignedToName());
                 aMap.put("email", a.getAssignedToEmail());
                 aMap.put("status", a.getStatus());
+                aMap.put("progress", a.getProgress()); // ✅ developer progress
                 return aMap;
             }).collect(Collectors.toList());
 
@@ -158,5 +168,29 @@ public class TeamService {
 
     public void unassignTask(String assignmentId) {
         taskAssignmentRepository.deleteById(assignmentId);
+    }
+
+    public List<Map<String, Object>> getMyProjects(String userId, String email) {
+
+        // ✅ Find all team memberships by userId or email
+        List<TeamMember> memberships = teamMemberRepository
+                .findByUserIdOrDeveloperEmail(userId, email);
+
+        return memberships.stream().map(m -> {
+            Map<String, Object> map = new HashMap<>();
+            Project project = m.getProject();
+            map.put("projectId", project.getId());
+            map.put("projectName", project.getName());
+            map.put("description", project.getDescription());
+            map.put("role", "DEVELOPER");
+            map.put("memberStatus", m.getStatus());
+
+            // ✅ Count assigned tasks
+            List<TaskAssignment> assignments = taskAssignmentRepository
+                    .findByAssignedToEmailAndTaskProjectId(email, project.getId());
+            map.put("assignedTasks", assignments.size());
+
+            return map;
+        }).collect(Collectors.toList());
     }
 }

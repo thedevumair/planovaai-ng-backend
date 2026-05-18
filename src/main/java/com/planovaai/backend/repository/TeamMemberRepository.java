@@ -10,6 +10,6 @@ import java.util.Optional;
 @Repository
 public interface TeamMemberRepository extends JpaRepository<TeamMember, String> {
     List<TeamMember> findByProjectId(String projectId);
-    Optional<TeamMember> findByProjectIdAndUserEmail(String projectId, String email);
-    boolean existsByProjectIdAndDeveloperEmail(String projectId, String email);
+    List<TeamMember> findByUserIdOrDeveloperEmail(String userId, String email);
+    Optional<TeamMember> findByProjectIdAndDeveloperEmail(String projectId, String email);
 }

@@ -25,8 +25,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()  // ✅ login/register public
-                        .anyRequest().authenticated()                  // ✅ everything else needs JWT
+                        .requestMatchers("/api/auth/**").permitAll()  // login/register public
+                        .requestMatchers("/api/github/webhook").permitAll()
+                        .requestMatchers("/api/github/**").permitAll()
+                        .anyRequest().authenticated()                  // everything else needs JWT
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

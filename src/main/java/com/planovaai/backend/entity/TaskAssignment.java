@@ -35,9 +35,11 @@ public class TaskAssignment {
     private LocalDateTime assignedAt = LocalDateTime.now();
 
     @Enumerated(EnumType.STRING)
-    private AssignmentStatus status = AssignmentStatus.ASSIGNED;
+    private AssignmentStatus status = AssignmentStatus.TODO; // default TODO
+
+    private int progress = 0; // add progress
 
     public enum AssignmentStatus {
-        ASSIGNED, IN_PROGRESS, DONE
+        TODO, IN_PROGRESS, DONE  // changed ASSIGNED to TODO
     }
 }
